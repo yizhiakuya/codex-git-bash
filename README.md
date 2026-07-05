@@ -1,7 +1,13 @@
 # Codex Shell Path Marketplace
 
-Git marketplace for `codex-shell-path-manager`, a local Codex plugin that installs and maintains
-the Windows Codex Desktop shell_path patch for Git Bash agent sessions.
+Git marketplace for `codex-shell-path-manager`, a Codex plugin that installs and maintains the
+Windows Codex Desktop shell_path patch for Git Bash agent sessions.
+
+Marketplace manifest:
+
+```text
+.agents/plugins/marketplace.json
+```
 
 Add the marketplace:
 
