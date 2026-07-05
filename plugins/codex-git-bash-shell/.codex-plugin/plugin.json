@@ -1,6 +1,6 @@
 {
   "name": "codex-git-bash-shell",
-  "version": "0.1.0+codex.20260705194758",
+  "version": "0.1.0+codex.20260705200340",
   "description": "Install, verify, and roll back the local Codex Windows shell_path patch used to run Codex Desktop agents in Git Bash.",
   "author": {
     "name": "yizhiakuya",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Codex Git Bash Shell",
     "shortDescription": "Repair Codex Desktop Git Bash shell routing",
-    "longDescription": "An unofficial community Codex plugin that installs and maintains the patched Codex CLI needed for Windows Desktop agent sessions to honor a configured Git Bash shell_path. It detects Git Bash, can install Git for Windows with winget, configures CODEX_CLI_PATH, verifies the active setup, and rolls back to the official CLI path.",
+    "longDescription": "An unofficial community Codex plugin that installs and maintains the patched Codex CLI needed for Windows Desktop agent sessions to honor a configured Git Bash shell_path. It can install a SHA256-verified GitHub Releases binary or build from source, detects Git Bash, can install Git for Windows with winget, configures CODEX_CLI_PATH, verifies the active setup, and rolls back to the official CLI path.",
     "developerName": "yizhiakuya",
     "category": "Developer Tools",
     "capabilities": [

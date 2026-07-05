@@ -57,7 +57,7 @@ The skill will guide Codex to run the bundled scripts.
 You can also run the scripts directly from the installed plugin cache or from this repository:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
 powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\verify.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\rollback.ps1
 ```
@@ -70,19 +70,34 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-she
 
 ## What Install Does
 
+Recommended release-binary install:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
+```
+
+Source-build install:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+```
+
 `install.ps1`:
 
 1. Finds Git Bash from `-BashPath`, `CODEX_GIT_BASH_PATH`, common Git for Windows paths, or `PATH`.
 2. Installs Git for Windows with `winget install Git.Git` if Git Bash is missing, unless
    `-SkipGitInstall` is used.
-3. Clones `https://github.com/openai/codex.git` into `~/.codex/codex-git-bash-shell/sources/`
-   unless `-SourceDir` is provided.
-4. Applies `plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch`.
-5. Optionally runs targeted tests with `-RunTests`.
-6. Builds `codex-cli` and copies the patched executable to
+3. With `-UseReleaseBinary`, downloads `codex-git-bash-windows-x86_64.zip` from GitHub Releases,
+   verifies `SHA256SUMS.txt`, and copies the patched executable to
    `~/.codex/bin/codex-git-bash/codex.exe`.
-7. Sets user `CODEX_CLI_PATH` to the patched executable.
-8. Updates `~/.codex/config.toml`:
+4. Without `-UseReleaseBinary`, clones `https://github.com/openai/codex.git` into
+   `~/.codex/codex-git-bash-shell/sources/` unless `-SourceDir` is provided.
+5. Applies `plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch`.
+6. Optionally runs targeted tests with `-RunTests`.
+7. Builds `codex-cli` and copies the patched executable to
+   `~/.codex/bin/codex-git-bash/codex.exe`.
+8. Sets user `CODEX_CLI_PATH` to the patched executable.
+9. Updates `~/.codex/config.toml`:
 
 ```toml
 [windows]
@@ -92,7 +107,7 @@ shell_path = "C:\\Program Files\\Git\\bin\\bash.exe"
 CODEX_CLI_PATH = "C:\\Users\\you\\.codex\\bin\\codex-git-bash\\codex.exe"
 ```
 
-9. Stores backups and state under `~/.codex/codex-git-bash-shell/`.
+10. Stores backups and state under `~/.codex/codex-git-bash-shell/`.
 
 The script does not modify the WindowsApps Codex installation.
 
@@ -102,9 +117,14 @@ The script does not modify the WindowsApps Codex installation.
 - PowerShell
 - Git for Windows, or `winget` so the installer can install it. `winget --silent` may still show
   a Windows prompt or require admin rights depending on the machine policy.
-- Rust/Cargo toolchain capable of building Codex CLI. The installer first tries the pinned
-  `1.95-x86_64-pc-windows-msvc` toolchain and falls back to the default Cargo toolchain.
-- Network access for cloning Codex source unless `-SourceDir` is used
+- Network access for GitHub Releases when using `-UseReleaseBinary`.
+- Rust/Cargo toolchain capable of building Codex CLI when building from source. The installer first
+  tries the pinned `1.95-x86_64-pc-windows-msvc` toolchain and falls back to the default Cargo
+  toolchain.
+- Network access for cloning Codex source unless `-SourceDir` is used when building from source.
+
+Release binaries are unofficial community builds and are currently unsigned, so Windows SmartScreen
+may warn before first use. Each release includes `SHA256SUMS.txt` and `BUILD_INFO.json`.
 
 ## Verify
 
@@ -134,7 +154,7 @@ codex plugin add codex-git-bash-shell@codex-git-bash
 Then run the installer again:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
 ```
 
 ## Rollback

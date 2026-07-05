@@ -56,7 +56,7 @@ skill 会指导 Codex 运行插件内置脚本。
 你也可以直接从已安装的插件缓存目录，或从本仓库运行脚本：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
 powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\verify.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\rollback.ps1
 ```
@@ -69,19 +69,34 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-she
 
 ## 安装脚本做什么
 
+推荐的 release binary 安装：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
+```
+
+源码构建安装：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+```
+
 `install.ps1` 会：
 
 1. 从 `-BashPath`、`CODEX_GIT_BASH_PATH`、常见 Git for Windows 路径或 `PATH` 中查找 Git Bash。
 2. 如果找不到 Git Bash，则用 `winget install Git.Git` 安装 Git for Windows，除非传入
    `-SkipGitInstall`。
-3. 克隆 `https://github.com/openai/codex.git` 到
+3. 如果传入 `-UseReleaseBinary`，从 GitHub Releases 下载
+   `codex-git-bash-windows-x86_64.zip`，校验 `SHA256SUMS.txt`，并把 patched executable
+   复制到 `~/.codex/bin/codex-git-bash/codex.exe`。
+4. 如果没有传入 `-UseReleaseBinary`，克隆 `https://github.com/openai/codex.git` 到
    `~/.codex/codex-git-bash-shell/sources/`，除非传入 `-SourceDir`。
-4. 应用 `plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch`。
-5. 如果传入 `-RunTests`，运行针对性的测试。
-6. 构建 `codex-cli`，并把 patched executable 复制到
+5. 应用 `plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch`。
+6. 如果传入 `-RunTests`，运行针对性的测试。
+7. 构建 `codex-cli`，并把 patched executable 复制到
    `~/.codex/bin/codex-git-bash/codex.exe`。
-7. 把用户级 `CODEX_CLI_PATH` 设置为 patched executable。
-8. 更新 `~/.codex/config.toml`：
+8. 把用户级 `CODEX_CLI_PATH` 设置为 patched executable。
+9. 更新 `~/.codex/config.toml`：
 
 ```toml
 [windows]
@@ -91,7 +106,7 @@ shell_path = "C:\\Program Files\\Git\\bin\\bash.exe"
 CODEX_CLI_PATH = "C:\\Users\\you\\.codex\\bin\\codex-git-bash\\codex.exe"
 ```
 
-9. 把备份和状态写到 `~/.codex/codex-git-bash-shell/`。
+10. 把备份和状态写到 `~/.codex/codex-git-bash-shell/`。
 
 脚本不会修改 WindowsApps 里的 Codex 安装目录。
 
@@ -101,9 +116,13 @@ CODEX_CLI_PATH = "C:\\Users\\you\\.codex\\bin\\codex-git-bash\\codex.exe"
 - PowerShell
 - Git for Windows；如果没有，需要系统可用 `winget` 以便安装器安装。根据机器策略，
   `winget --silent` 仍可能弹出 Windows 提示或需要管理员权限。
-- 能构建 Codex CLI 的 Rust/Cargo toolchain。安装器会先尝试固定的
+- 使用 `-UseReleaseBinary` 时，需要能访问 GitHub Releases。
+- 从源码构建时，需要能构建 Codex CLI 的 Rust/Cargo toolchain。安装器会先尝试固定的
   `1.95-x86_64-pc-windows-msvc` toolchain，失败后回退到默认 Cargo toolchain。
-- 网络访问；如果使用 `-SourceDir` 指向已有源码，则克隆 Codex 源码不需要网络
+- 从源码构建时需要网络访问；如果使用 `-SourceDir` 指向已有源码，则克隆 Codex 源码不需要网络。
+
+Release binary 是非官方社区构建，并且目前未签名，Windows SmartScreen 首次运行时可能提示。
+每个 release 会包含 `SHA256SUMS.txt` 和 `BUILD_INFO.json`。
 
 ## 验证
 
@@ -132,7 +151,7 @@ codex plugin add codex-git-bash-shell@codex-git-bash
 然后重新运行安装器：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\codex-git-bash-shell\scripts\install.ps1 -UseReleaseBinary
 ```
 
 ## 回滚

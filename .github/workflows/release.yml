@@ -1,0 +1,146 @@
+name: Build release binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create or update
+        required: true
+        default: v0.1.0
+      upstream_ref:
+        description: openai/codex ref to patch and build
+        required: true
+        default: main
+      prerelease:
+        description: Mark release as prerelease
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build patched Codex CLI for Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout marketplace
+        uses: actions/checkout@v4
+        with:
+          path: marketplace
+
+      - name: Checkout OpenAI Codex
+        uses: actions/checkout@v4
+        with:
+          repository: openai/codex
+          ref: ${{ inputs.upstream_ref }}
+          path: codex
+
+      - name: Install Rust
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.95-x86_64-pc-windows-msvc --profile minimal
+
+      - name: Apply shell_path patch
+        shell: pwsh
+        run: |
+          git -C codex apply "$env:GITHUB_WORKSPACE\marketplace\plugins\codex-git-bash-shell\patches\codex-windows-shell-path.patch"
+
+      - name: Build codex.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $cargoDir = Join-Path $env:GITHUB_WORKSPACE "codex"
+          if (Test-Path (Join-Path $cargoDir "codex-rs\Cargo.toml")) {
+            $cargoDir = Join-Path $cargoDir "codex-rs"
+          }
+          cargo +1.95-x86_64-pc-windows-msvc build -p codex-cli --bin codex --release --manifest-path (Join-Path $cargoDir "Cargo.toml")
+
+      - name: Stage release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assetName = "codex-git-bash-windows-x86_64.zip"
+          $repoRoot = Join-Path $env:GITHUB_WORKSPACE "marketplace"
+          $codexRoot = Join-Path $env:GITHUB_WORKSPACE "codex"
+          $cargoDir = $codexRoot
+          if (Test-Path (Join-Path $cargoDir "codex-rs\Cargo.toml")) {
+            $cargoDir = Join-Path $cargoDir "codex-rs"
+          }
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
+          $payloadDir = Join-Path $releaseDir "payload"
+          New-Item -ItemType Directory -Path $payloadDir -Force | Out-Null
+
+          Copy-Item -LiteralPath (Join-Path $cargoDir "target\release\codex.exe") -Destination (Join-Path $payloadDir "codex.exe") -Force
+          Copy-Item -LiteralPath (Join-Path $repoRoot "NOTICE") -Destination (Join-Path $payloadDir "NOTICE") -Force
+          Copy-Item -LiteralPath (Join-Path $repoRoot "THIRD_PARTY_NOTICES.md") -Destination (Join-Path $payloadDir "THIRD_PARTY_NOTICES.md") -Force
+          New-Item -ItemType Directory -Path (Join-Path $payloadDir "LICENSES") -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSES\Apache-2.0.txt") -Destination (Join-Path $payloadDir "LICENSES\Apache-2.0.txt") -Force
+
+          $upstreamCommit = (git -C $codexRoot rev-parse HEAD).Trim()
+          $marketplaceCommit = (git -C $repoRoot rev-parse HEAD).Trim()
+          $patchSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $repoRoot "plugins\codex-git-bash-shell\patches\codex-windows-shell-path.patch")).Hash.ToLowerInvariant()
+          $buildInfo = [ordered]@{
+            releaseTag = "${{ inputs.release_tag }}"
+            upstreamRepository = "openai/codex"
+            upstreamRef = "${{ inputs.upstream_ref }}"
+            upstreamCommit = $upstreamCommit
+            marketplaceRepository = "${{ github.repository }}"
+            marketplaceCommit = $marketplaceCommit
+            patchPath = "plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch"
+            patchSha256 = $patchSha256
+            assetName = $assetName
+            target = "x86_64-pc-windows-msvc"
+            builtAt = (Get-Date).ToUniversalTime().ToString("o")
+            unofficial = $true
+          } | ConvertTo-Json -Depth 5
+          $buildInfoPath = Join-Path $payloadDir "BUILD_INFO.json"
+          [System.IO.File]::WriteAllText($buildInfoPath, $buildInfo + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
+
+          $zipPath = Join-Path $releaseDir $assetName
+          Compress-Archive -Path (Join-Path $payloadDir "*") -DestinationPath $zipPath -Force
+
+          Copy-Item -LiteralPath $buildInfoPath -Destination (Join-Path $releaseDir "BUILD_INFO.json") -Force
+          $zipSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath).Hash.ToLowerInvariant()
+          [System.IO.File]::WriteAllText((Join-Path $releaseDir "SHA256SUMS.txt"), "$zipSha  $assetName`n", [System.Text.UTF8Encoding]::new($false))
+
+      - name: Create or update release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $releaseDir = Join-Path $env:GITHUB_WORKSPACE "release"
+          $tag = "${{ inputs.release_tag }}"
+          $notes = @"
+          Unofficial Codex Git Bash community build.
+
+          Assets:
+          - codex-git-bash-windows-x86_64.zip
+          - SHA256SUMS.txt
+          - BUILD_INFO.json
+
+          The zip contains a patched codex.exe plus NOTICE and third-party license files.
+          "@
+
+          $existing = gh release view $tag --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0 -and $existing) {
+            gh release upload $tag `
+              (Join-Path $releaseDir "codex-git-bash-windows-x86_64.zip") `
+              (Join-Path $releaseDir "SHA256SUMS.txt") `
+              (Join-Path $releaseDir "BUILD_INFO.json") `
+              --clobber
+          } else {
+            $args = @("release", "create", $tag,
+              (Join-Path $releaseDir "codex-git-bash-windows-x86_64.zip"),
+              (Join-Path $releaseDir "SHA256SUMS.txt"),
+              (Join-Path $releaseDir "BUILD_INFO.json"),
+              "--title", $tag,
+              "--notes", $notes)
+            if ("${{ inputs.prerelease }}" -eq "true") {
+              $args += "--prerelease"
+            }
+            gh @args
+          }

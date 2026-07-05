@@ -9,3 +9,4 @@
 - 添加安装、验证和回滚脚本。
 - 以 `.agents/plugins/marketplace.json` 格式发布为 Codex Git marketplace。
 - 添加 OpenAI Codex Apache-2.0 patch target 的第三方 notice。
+- 添加可选的 GitHub Releases binary 安装路径，并进行 SHA256 校验。

@@ -32,7 +32,7 @@ Resolve the plugin root from this skill path, then run scripts from `<plugin-roo
 Install or repair from Git Bash:
 
 ```bash
-bash <plugin-root>/scripts/install.sh
+bash <plugin-root>/scripts/install.sh -UseReleaseBinary
 ```
 
 Verify:
@@ -50,7 +50,7 @@ bash <plugin-root>/scripts/rollback.sh
 When running from PowerShell instead, use:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>\scripts\install.ps1 -UseReleaseBinary
 ```
 
 ## Install Behavior
@@ -60,17 +60,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>\scripts\instal
 1. Detects Git Bash from `-BashPath`, `CODEX_GIT_BASH_PATH`, common Git for Windows paths, or `PATH`.
 2. If Git Bash is missing, installs official Git for Windows with `winget install --id Git.Git`
    unless `-SkipGitInstall` is passed.
-3. Clones Codex source into `~/.codex/codex-git-bash-shell/sources/` unless `-SourceDir` is passed.
-4. Applies `patches/codex-windows-shell-path.patch`.
-5. Optionally runs targeted tests when `-RunTests` is passed.
-6. Builds `codex-cli` and copies `codex.exe` to `~/.codex/bin/codex-git-bash/codex.exe`.
-7. Sets user `CODEX_CLI_PATH`.
-8. Updates `[windows].shell_path` and `[mcp_servers.node_repl.env].CODEX_CLI_PATH` in `config.toml`.
-9. Writes backups and state under `~/.codex/codex-git-bash-shell/`.
+3. When `-UseReleaseBinary` is passed, downloads the prebuilt GitHub Release zip, verifies
+   `SHA256SUMS.txt`, and copies `codex.exe` to `~/.codex/bin/codex-git-bash/codex.exe`.
+4. Without `-UseReleaseBinary`, clones Codex source into
+   `~/.codex/codex-git-bash-shell/sources/` unless `-SourceDir` is passed.
+5. Applies `patches/codex-windows-shell-path.patch`.
+6. Optionally runs targeted tests when `-RunTests` is passed.
+7. Builds `codex-cli` and copies `codex.exe` to `~/.codex/bin/codex-git-bash/codex.exe`.
+8. Sets user `CODEX_CLI_PATH`.
+9. Updates `[windows].shell_path` and `[mcp_servers.node_repl.env].CODEX_CLI_PATH` in `config.toml`.
+10. Writes backups and state under `~/.codex/codex-git-bash-shell/`.
 
 Useful options:
 
 ```powershell
+-UseReleaseBinary       Download a prebuilt GitHub Release instead of building from source.
+-ReleaseTag <tag>       Download a specific release tag. Defaults to latest.
+-ExpectedReleaseSha256  Pin the expected release zip SHA256.
 -SourceDir <path>       Use an existing Codex checkout.
 -BashPath <path>        Force a specific Git Bash path.
 -RunTests               Run the targeted shell_path test set before copying codex.exe.

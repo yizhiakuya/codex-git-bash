@@ -295,6 +295,137 @@ function Test-PathValueEqual {
     return [string]::Equals($normalizedLeft, $normalizedRight, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
+function Test-UriString {
+    param([Parameter(Mandatory)][string]$Value)
+    return ($Value -match '^[a-zA-Z][a-zA-Z0-9+.-]*://')
+}
+
+function Resolve-ReleaseAssetUri {
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [Parameter(Mandatory)][string]$AssetName
+    )
+
+    if (Test-UriString -Value $BaseUrl) {
+        return ($BaseUrl.TrimEnd('/') + '/' + $AssetName)
+    }
+
+    if (Test-Path -LiteralPath $BaseUrl -PathType Container) {
+        return (Join-Path $BaseUrl $AssetName)
+    }
+
+    return ($BaseUrl.TrimEnd('/') + '/' + $AssetName)
+}
+
+function Copy-ReleaseAsset {
+    param(
+        [Parameter(Mandatory)][string]$Source,
+        [Parameter(Mandatory)][string]$Destination
+    )
+
+    $parent = Split-Path -Parent $Destination
+    if ($parent) {
+        New-DirectoryIfMissing -Path $parent
+    }
+
+    if (-not (Test-UriString -Value $Source) -and (Test-Path -LiteralPath $Source -PathType Leaf)) {
+        Copy-Item -LiteralPath $Source -Destination $Destination -Force
+        return
+    }
+
+    Invoke-WebRequest -Uri $Source -OutFile $Destination -UseBasicParsing
+}
+
+function Read-ReleaseSha256Sums {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $result = @{}
+    foreach ($line in (Get-Content -LiteralPath $Path)) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) {
+            continue
+        }
+        if ($trimmed -notmatch '^([a-fA-F0-9]{64})\s+\*?(.+)$') {
+            continue
+        }
+        $result[$Matches[2].Trim()] = $Matches[1].ToLowerInvariant()
+    }
+    return $result
+}
+
+function Test-Sha256Match {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$ExpectedSha256,
+        [Parameter(Mandatory)][string]$Label
+    )
+
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+    $expected = $ExpectedSha256.ToLowerInvariant()
+    if ($actual -ne $expected) {
+        throw "SHA256 mismatch for ${Label}: expected $expected, got $actual"
+    }
+}
+
+function Install-CodexReleaseBinary {
+    param(
+        [Parameter(Mandatory)][string]$OutputDir,
+        [string]$ReleaseAssetBaseUrl = 'https://github.com/yizhiakuya/codex-git-bash/releases/latest/download',
+        [string]$AssetName = 'codex-git-bash-windows-x86_64.zip',
+        [string]$ExpectedSha256
+    )
+
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-git-bash-release-" + [guid]::NewGuid().ToString('N'))
+    New-DirectoryIfMissing -Path $tempRoot
+
+    try {
+        $zipPath = Join-Path $tempRoot $AssetName
+        $shaPath = Join-Path $tempRoot 'SHA256SUMS.txt'
+        $buildInfoPath = Join-Path $tempRoot 'BUILD_INFO.json'
+
+        Copy-ReleaseAsset -Source (Resolve-ReleaseAssetUri -BaseUrl $ReleaseAssetBaseUrl -AssetName $AssetName) -Destination $zipPath
+        Copy-ReleaseAsset -Source (Resolve-ReleaseAssetUri -BaseUrl $ReleaseAssetBaseUrl -AssetName 'SHA256SUMS.txt') -Destination $shaPath
+
+        $shaSums = Read-ReleaseSha256Sums -Path $shaPath
+        $publishedSha = $shaSums[$AssetName]
+        if (-not $publishedSha) {
+            throw "SHA256SUMS.txt does not contain an entry for $AssetName"
+        }
+        Test-Sha256Match -Path $zipPath -ExpectedSha256 $publishedSha -Label $AssetName
+
+        if ($ExpectedSha256) {
+            Test-Sha256Match -Path $zipPath -ExpectedSha256 $ExpectedSha256 -Label "$AssetName expected override"
+        }
+
+        try {
+            Copy-ReleaseAsset -Source (Resolve-ReleaseAssetUri -BaseUrl $ReleaseAssetBaseUrl -AssetName 'BUILD_INFO.json') -Destination $buildInfoPath
+        } catch {
+            Write-Warning "BUILD_INFO.json was not available: $($_.Exception.Message)"
+        }
+
+        $extractDir = Join-Path $tempRoot 'extract'
+        New-DirectoryIfMissing -Path $extractDir
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+
+        $extractedCodex = Get-ChildItem -LiteralPath $extractDir -Filter 'codex.exe' -Recurse -File | Select-Object -First 1
+        if (-not $extractedCodex) {
+            throw "Release asset $AssetName did not contain codex.exe"
+        }
+
+        New-DirectoryIfMissing -Path $OutputDir
+        $installedExe = Join-Path $OutputDir 'codex.exe'
+        Copy-Item -LiteralPath $extractedCodex.FullName -Destination $installedExe -Force
+
+        if (Test-Path -LiteralPath $buildInfoPath -PathType Leaf) {
+            Copy-Item -LiteralPath $buildInfoPath -Destination (Join-Path $OutputDir 'BUILD_INFO.json') -Force
+        }
+
+        return (Resolve-Path -LiteralPath $installedExe).Path
+    } finally {
+        Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Resolve-PreviousUserCodexCliPath {
     param(
         [AllowNull()][string]$CurrentUserValue,
@@ -666,6 +797,7 @@ Export-ModuleMember -Function @(
     'Get-CodexGitBashPaths',
     'Get-ObjectPropertyValue',
     'Get-TomlStringKey',
+    'Install-CodexReleaseBinary',
     'Invoke-CodexShellPathTests',
     'New-CodexSourceClone',
     'New-DirectoryIfMissing',
