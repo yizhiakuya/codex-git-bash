@@ -9,7 +9,7 @@ Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -Dis
 
 if ($Help) {
     Write-Host @'
-Codex Shell Path Manager verifier
+Codex Git Bash Shell verifier
 
 Checks whether Codex Desktop is configured to use the patched CLI and a working
 Git Bash shell_path. This script is read-only.
@@ -24,8 +24,8 @@ Options:
     exit 0
 }
 
-Assert-RtkWindows
-$paths = Get-RtkManagerPaths
+Assert-CodexGitBashWindows
+$paths = Get-CodexGitBashPaths
 $failed = $false
 
 function Report-Check {

@@ -1,11 +1,11 @@
 Set-StrictMode -Version Latest
 
-function Get-RtkManagerPaths {
+function Get-CodexGitBashPaths {
     $userProfile = [Environment]::GetFolderPath('UserProfile')
     $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $userProfile '.codex' }
     $pluginRoot = Split-Path -Parent $PSScriptRoot
-    $stateRoot = Join-Path $codexHome 'codex-shell-path-manager'
-    $binDir = Join-Path $codexHome 'bin\codex-shell-path'
+    $stateRoot = Join-Path $codexHome 'codex-git-bash-shell'
+    $binDir = Join-Path $codexHome 'bin\codex-git-bash'
 
     [pscustomobject]@{
         UserProfile = $userProfile
@@ -22,7 +22,7 @@ function Get-RtkManagerPaths {
     }
 }
 
-function Assert-RtkWindows {
+function Assert-CodexGitBashWindows {
     if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
         throw 'This manager is intended for Windows Codex Desktop.'
     }
@@ -551,7 +551,7 @@ function Set-CodexDesktopRouting {
     }
 }
 
-function Save-RtkManagerState {
+function Save-CodexGitBashState {
     param(
         [Parameter(Mandatory)][string]$StateFile,
         [Parameter(Mandatory)][hashtable]$State
@@ -560,7 +560,7 @@ function Save-RtkManagerState {
     Write-Utf8NoBomFile -Path $StateFile -Content ($json + [Environment]::NewLine)
 }
 
-function Read-RtkManagerState {
+function Read-CodexGitBashState {
     param([Parameter(Mandatory)][string]$StateFile)
     if (-not (Test-Path -LiteralPath $StateFile)) {
         return $null

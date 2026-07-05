@@ -1,13 +1,13 @@
 {
-  "name": "codex-shell-path-manager",
-  "version": "0.1.0+codex.20260705191422",
+  "name": "codex-git-bash-shell",
+  "version": "0.1.0+codex.20260705192529",
   "description": "Install, verify, and roll back the local Codex Windows shell_path patch used to run Codex Desktop agents in Git Bash.",
   "author": {
     "name": "yizhiakuya",
     "url": "https://github.com/yizhiakuya"
   },
-  "homepage": "https://github.com/yizhiakuya/codex-shell-path-marketplace",
-  "repository": "https://github.com/yizhiakuya/codex-shell-path-marketplace",
+  "homepage": "https://github.com/yizhiakuya/codex-git-bash",
+  "repository": "https://github.com/yizhiakuya/codex-git-bash",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -18,7 +18,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Codex Shell Path Manager",
+    "displayName": "Codex Git Bash Shell",
     "shortDescription": "Repair Codex Desktop Git Bash shell routing",
     "longDescription": "A local Codex plugin that installs and maintains the patched Codex CLI needed for Windows Desktop agent sessions to honor a configured Git Bash shell_path. It detects Git Bash, can install Git for Windows with winget, configures CODEX_CLI_PATH, verifies the active setup, and rolls back to the official CLI path.",
     "developerName": "yizhiakuya",
@@ -32,6 +32,6 @@
       "Roll back the patched Codex CLI"
     ],
     "brandColor": "#2563EB",
-    "websiteURL": "https://github.com/yizhiakuya/codex-shell-path-marketplace"
+    "websiteURL": "https://github.com/yizhiakuya/codex-git-bash"
   }
 }

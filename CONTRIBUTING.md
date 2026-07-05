@@ -10,7 +10,7 @@ Validate the plugin after changes. If you have the Codex plugin creator helper i
 run:
 
 ```bash
-python ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/codex-shell-path-manager
+python ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/codex-git-bash-shell
 ```
 
 You can also validate through Codex itself by adding this repository as a local marketplace and
@@ -18,17 +18,17 @@ installing the plugin:
 
 ```bash
 codex plugin marketplace add .
-codex plugin add codex-shell-path-manager@codex-shell-path
+codex plugin add codex-git-bash-shell@codex-git-bash
 ```
 
 Check PowerShell syntax:
 
 ```powershell
 $files = @(
-  "plugins\codex-shell-path-manager\scripts\CodexShellPathManager.psm1",
-  "plugins\codex-shell-path-manager\scripts\install.ps1",
-  "plugins\codex-shell-path-manager\scripts\verify.ps1",
-  "plugins\codex-shell-path-manager\scripts\rollback.ps1"
+  "plugins\codex-git-bash-shell\scripts\CodexShellPathManager.psm1",
+  "plugins\codex-git-bash-shell\scripts\install.ps1",
+  "plugins\codex-git-bash-shell\scripts\verify.ps1",
+  "plugins\codex-git-bash-shell\scripts\rollback.ps1"
 )
 foreach ($f in $files) {
   $tokens = $null
@@ -40,12 +40,12 @@ foreach ($f in $files) {
 
 ## Release
 
-1. Update `plugins/codex-shell-path-manager/.codex-plugin/plugin.json`.
+1. Update `plugins/codex-git-bash-shell/.codex-plugin/plugin.json`.
 2. Validate the plugin.
 3. Commit and push to `main`.
 4. Users can refresh with:
 
 ```bash
-codex plugin marketplace upgrade codex-shell-path
-codex plugin add codex-shell-path-manager@codex-shell-path
+codex plugin marketplace upgrade codex-git-bash
+codex plugin add codex-git-bash-shell@codex-git-bash
 ```

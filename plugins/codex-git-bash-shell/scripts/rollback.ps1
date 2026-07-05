@@ -11,7 +11,7 @@ Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -Dis
 
 if ($Help) {
     Write-Host @'
-Codex Shell Path Manager rollback
+Codex Git Bash Shell rollback
 
 Restores/removes CODEX_CLI_PATH and removes config.toml keys created by install.
 
@@ -21,7 +21,7 @@ Usage:
 Options:
   -KeepWindowsShellPath   Leave [windows].shell_path in ~/.codex/config.toml.
   -KeepNodeReplCliPath    Leave node_repl CODEX_CLI_PATH in ~/.codex/config.toml.
-  -RemoveBuiltCli         Delete ~/.codex/bin/codex-shell-path/codex.exe.
+  -RemoveBuiltCli         Delete ~/.codex/bin/codex-git-bash/codex.exe.
   -Help                   Print this help.
 
 Notes:
@@ -30,9 +30,9 @@ Notes:
     exit 0
 }
 
-Assert-RtkWindows
-$paths = Get-RtkManagerPaths
-$state = Read-RtkManagerState -StateFile $paths.StateFile
+Assert-CodexGitBashWindows
+$paths = Get-CodexGitBashPaths
+$state = Read-CodexGitBashState -StateFile $paths.StateFile
 
 Backup-FileIfExists -Path $paths.ConfigPath -BackupRoot $paths.BackupsRoot -Label 'rollback-config' | Out-Null
 

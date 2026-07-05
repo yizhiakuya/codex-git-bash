@@ -1,14 +1,14 @@
 {
-  "name": "codex-shell-path",
+  "name": "codex-git-bash",
   "interface": {
-    "displayName": "Codex Shell Path"
+    "displayName": "Codex Git Bash"
   },
   "plugins": [
     {
-      "name": "codex-shell-path-manager",
+      "name": "codex-git-bash-shell",
       "source": {
         "source": "local",
-        "path": "./plugins/codex-shell-path-manager"
+        "path": "./plugins/codex-git-bash-shell"
       },
       "policy": {
         "installation": "AVAILABLE",

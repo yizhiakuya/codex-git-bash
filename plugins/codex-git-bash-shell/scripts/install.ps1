@@ -18,7 +18,7 @@ Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -Dis
 
 if ($Help) {
     Write-Host @'
-Codex Shell Path Manager installer
+Codex Git Bash Shell installer
 
 Builds a patched Codex CLI, configures Codex Desktop to start that CLI through
 CODEX_CLI_PATH, and sets [windows].shell_path to Git Bash.
@@ -46,8 +46,8 @@ Notes:
     exit 0
 }
 
-Assert-RtkWindows
-$paths = Get-RtkManagerPaths
+Assert-CodexGitBashWindows
+$paths = Get-CodexGitBashPaths
 New-DirectoryIfMissing -Path $paths.StateRoot
 New-DirectoryIfMissing -Path $paths.BackupsRoot
 
@@ -79,7 +79,7 @@ Set-CodexDesktopRouting `
     -SkipUserEnvironment:$SkipUserEnvironment `
     -SkipConfig:$SkipConfig
 
-Save-RtkManagerState -StateFile $paths.StateFile -State @{
+Save-CodexGitBashState -StateFile $paths.StateFile -State @{
     installedAt = (Get-Date).ToString('o')
     sourceDir = $resolvedSource
     repoUrl = $RepoUrl
@@ -94,7 +94,7 @@ Save-RtkManagerState -StateFile $paths.StateFile -State @{
 }
 
 Write-Host ''
-Write-Host 'Codex shell path manager install complete.'
+Write-Host 'Codex Git Bash shell install complete.'
 Write-Host "Git Bash:        $resolvedBash"
 Write-Host "Patched Codex:   $codexCliPath"
 Write-Host "Config:          $($paths.ConfigPath)"

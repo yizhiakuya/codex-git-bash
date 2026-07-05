@@ -1,12 +1,12 @@
 ---
-name: codex-shell-path-manager
+name: codex-git-bash-shell
 description: Install, verify, repair, or roll back the local Codex Desktop Windows shell_path patch that lets Codex agent sessions use Git Bash instead of native PowerShell. Use when CODEX_CLI_PATH routing is broken after a Codex Desktop update, when ~/.codex/config.toml [windows].shell_path needs repair, when Git Bash is missing or installed in a different path, or when the user wants to recover to the official Codex CLI.
 ---
 
-# Codex Shell Path Manager
+# Codex Git Bash Shell
 
 This is a Codex plugin type: it has `.codex-plugin/plugin.json`, is listed in the personal
-marketplace, and is installed with `codex plugin add codex-shell-path-manager@personal`.
+marketplace, and is installed with `codex plugin add codex-git-bash-shell@personal`.
 
 Use it to maintain the local Windows Codex Desktop setup where:
 
@@ -59,13 +59,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <plugin-root>\scripts\instal
 1. Detects Git Bash from `-BashPath`, `CODEX_GIT_BASH_PATH`, common Git for Windows paths, or `PATH`.
 2. If Git Bash is missing, installs official Git for Windows with `winget install --id Git.Git`
    unless `-SkipGitInstall` is passed.
-3. Clones Codex source into `~/.codex/codex-shell-path-manager/sources/` unless `-SourceDir` is passed.
+3. Clones Codex source into `~/.codex/codex-git-bash-shell/sources/` unless `-SourceDir` is passed.
 4. Applies `patches/codex-windows-shell-path.patch`.
 5. Optionally runs targeted tests when `-RunTests` is passed.
-6. Builds `codex-cli` and copies `codex.exe` to `~/.codex/bin/codex-shell-path/codex.exe`.
+6. Builds `codex-cli` and copies `codex.exe` to `~/.codex/bin/codex-git-bash/codex.exe`.
 7. Sets user `CODEX_CLI_PATH`.
 8. Updates `[windows].shell_path` and `[mcp_servers.node_repl.env].CODEX_CLI_PATH` in `config.toml`.
-9. Writes backups and state under `~/.codex/codex-shell-path-manager/`.
+9. Writes backups and state under `~/.codex/codex-git-bash-shell/`.
 
 Useful options:
 
@@ -84,7 +84,7 @@ Useful options:
 Run `verify.ps1` after install and again in a new thread after restarting Desktop. A healthy setup
 has:
 
-- `~/.codex/bin/codex-shell-path/codex.exe` present
+- `~/.codex/bin/codex-git-bash/codex.exe` present
 - user `CODEX_CLI_PATH` equal to that path
 - `[windows].shell_path` set to a working Git Bash `bash.exe`
 - node_repl `CODEX_CLI_PATH` set for plugin-side helpers
