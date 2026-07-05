@@ -8,3 +8,4 @@
 - Add Windows Git Bash shell_path patch for Codex CLI.
 - Add install, verify, and rollback scripts.
 - Publish as a Codex Git marketplace with `.agents/plugins/marketplace.json`.
+- Add third-party notices for the OpenAI Codex Apache-2.0 patch target.

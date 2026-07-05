@@ -4,6 +4,8 @@
 
 这个仓库包含一个社区维护插件，用于在 Windows 上构建并运行 patched Codex CLI。
 
+这是一个非官方社区项目，不隶属于 OpenAI，也不代表 OpenAI 背书或赞助。
+
 ## 报告方式
 
 如果安全问题不包含私密凭据，可以直接开 GitHub issue。对于敏感报告，请先通过 GitHub

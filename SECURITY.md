@@ -5,6 +5,9 @@
 This repository contains a community maintenance plugin that builds and runs a patched Codex CLI on
 Windows.
 
+This is an unofficial community project and is not affiliated with, endorsed by, or sponsored by
+OpenAI.
+
 ## Reporting
 
 Open a GitHub issue for security concerns that do not expose private credentials. For sensitive

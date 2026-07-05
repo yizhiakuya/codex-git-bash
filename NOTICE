@@ -1,0 +1,18 @@
+Codex Git Bash
+Copyright (c) 2026 yizhiakuya
+
+This project is an unofficial community plugin for Codex. It is not affiliated
+with, endorsed by, or sponsored by OpenAI.
+
+The file plugins/codex-git-bash-shell/patches/codex-windows-shell-path.patch
+contains modifications intended to be applied to OpenAI Codex source files.
+OpenAI Codex is licensed under the Apache License, Version 2.0.
+
+OpenAI Codex
+Copyright 2025 OpenAI
+
+This project includes code derived from Ratatui (https://github.com/ratatui/ratatui),
+licensed under the MIT license.
+Copyright (c) 2016-2022 Florian Dehau
+Copyright (c) 2023-2025 The Ratatui Developers
+

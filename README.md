@@ -5,6 +5,9 @@ English | [简体中文](README.zh-CN.md)
 A Git marketplace for `codex-git-bash-shell`, a Codex plugin that helps Windows Codex Desktop
 agents start in Git Bash instead of the native Windows PowerShell shell.
 
+This is an unofficial community project. It is not affiliated with, endorsed by, or sponsored by
+OpenAI.
+
 This repository packages a maintenance plugin, not a replacement for Codex Desktop. The plugin
 builds a patched `codex.exe`, configures Desktop to start that patched CLI through
 `CODEX_CLI_PATH`, and writes `[windows].shell_path` in `~/.codex/config.toml`.
@@ -20,6 +23,13 @@ Related upstream discussion:
 - <https://github.com/openai/codex/issues/27390>
 
 If upstream Codex later ships this feature, prefer the official implementation.
+
+## Licensing
+
+Project code and documentation are released under the MIT license unless otherwise noted. The
+bundled patch targets OpenAI Codex source code and follows the upstream Apache-2.0 notice
+requirements. See [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
+[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).
 
 ## Install The Marketplace
 
@@ -153,3 +163,6 @@ plugins/codex-git-bash-shell/
 - The installer edits user-level environment variables and `~/.codex/config.toml`.
 - The installer creates backups under `~/.codex/codex-git-bash-shell/backups/`.
 - This is a local maintenance tool. It is not an official OpenAI plugin.
+- The bundled patch targets OpenAI Codex source code, which is licensed under Apache-2.0. See
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [NOTICE](NOTICE), and
+  [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).
