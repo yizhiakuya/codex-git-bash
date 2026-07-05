@@ -1,0 +1,537 @@
+diff --git a/codex-rs/config/src/types.rs b/codex-rs/config/src/types.rs
+index 5303fccd43..674fca07a7 100644
+--- a/codex-rs/config/src/types.rs
++++ b/codex-rs/config/src/types.rs
+@@ -148,6 +148,9 @@ pub struct WindowsToml {
+     /// Defaults to `true`. Set to `false` to launch the final sandboxed child
+     /// process on `Winsta0\\Default` instead of a private desktop.
+     pub sandbox_private_desktop: Option<bool>,
++    /// Optional absolute path to the shell executable used as the default
++    /// session shell on Windows.
++    pub shell_path: Option<AbsolutePathBuf>,
+ }
+ 
+ #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, JsonSchema)]
+diff --git a/codex-rs/core/config.schema.json b/codex-rs/core/config.schema.json
+index 876180dd7e..dc036c31aa 100644
+--- a/codex-rs/core/config.schema.json
++++ b/codex-rs/core/config.schema.json
+@@ -4580,6 +4580,14 @@
+         "sandbox_private_desktop": {
+           "description": "Defaults to `true`. Set to `false` to launch the final sandboxed child process on `Winsta0\\\\Default` instead of a private desktop.",
+           "type": "boolean"
++        },
++        "shell_path": {
++          "allOf": [
++            {
++              "$ref": "#/definitions/AbsolutePathBuf"
++            }
++          ],
++          "description": "Optional absolute path to the shell executable used as the default session shell on Windows."
+         }
+       },
+       "type": "object"
+diff --git a/codex-rs/core/src/config/config_tests.rs b/codex-rs/core/src/config/config_tests.rs
+index 6156b9b9ea..2747577d0b 100644
+--- a/codex-rs/core/src/config/config_tests.rs
++++ b/codex-rs/core/src/config/config_tests.rs
+@@ -217,6 +217,69 @@ async fn load_config_normalizes_relative_cwd_override() -> std::io::Result<()> {
+     Ok(())
+ }
+ 
++#[tokio::test]
++#[cfg(windows)]
++async fn load_config_preserves_windows_shell_path() -> std::io::Result<()> {
++    let codex_home = tempdir()?;
++    let cwd = tempdir()?;
++    let shell_path = cwd
++        .path()
++        .join(if cfg!(windows) { "bash.exe" } else { "bash" });
++    std::fs::write(&shell_path, [])?;
++
++    let config = Config::load_from_base_config_with_overrides(
++        ConfigToml {
++            windows: Some(WindowsToml {
++                shell_path: Some(shell_path.abs()),
++                ..Default::default()
++            }),
++            ..Default::default()
++        },
++        ConfigOverrides {
++            cwd: Some(cwd.path().to_path_buf()),
++            ..Default::default()
++        },
++        codex_home.abs(),
++    )
++    .await?;
++
++    assert_eq!(
++        config.windows_shell_path.as_deref(),
++        Some(shell_path.as_path())
++    );
++    Ok(())
++}
++
++#[tokio::test]
++#[cfg(windows)]
++async fn load_config_rejects_invalid_windows_shell_path() -> std::io::Result<()> {
++    let codex_home = tempdir()?;
++    let cwd = tempdir()?;
++    let shell_path = cwd.path().join("custom-shell.exe");
++    std::fs::write(&shell_path, [])?;
++
++    let err = Config::load_from_base_config_with_overrides(
++        ConfigToml {
++            windows: Some(WindowsToml {
++                shell_path: Some(shell_path.abs()),
++                ..Default::default()
++            }),
++            ..Default::default()
++        },
++        ConfigOverrides {
++            cwd: Some(cwd.path().to_path_buf()),
++            ..Default::default()
++        },
++        codex_home.abs(),
++    )
++    .await
++    .expect_err("invalid windows shell path should be rejected");
++
++    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
++    assert!(err.to_string().contains("windows.shell_path `"));
++    Ok(())
++}
++
+ #[tokio::test]
+ async fn test_toml_parsing() {
+     let history_with_persistence = r#"
+@@ -1488,6 +1551,7 @@ async fn network_proxy_feature_matrix_preserves_sandbox_network_semantics() -> s
+                 windows: Some(WindowsToml {
+                     sandbox: Some(WindowsSandboxModeToml::Elevated),
+                     sandbox_private_desktop: None,
++                    ..Default::default()
+                 }),
+                 features,
+                 ..Default::default()
+@@ -2907,6 +2971,7 @@ async fn implicit_builtin_workspace_profile_preserves_sandbox_workspace_write_se
+             windows: Some(WindowsToml {
+                 sandbox: Some(WindowsSandboxModeToml::Elevated),
+                 sandbox_private_desktop: None,
++                ..Default::default()
+             }),
+             ..Default::default()
+         },
+@@ -2972,6 +3037,7 @@ async fn implicit_builtin_workspace_profile_preserves_add_dir_metadata_carveouts
+             windows: Some(WindowsToml {
+                 sandbox: Some(WindowsSandboxModeToml::Elevated),
+                 sandbox_private_desktop: None,
++                ..Default::default()
+             }),
+             ..Default::default()
+         },
+diff --git a/codex-rs/core/src/config/mod.rs b/codex-rs/core/src/config/mod.rs
+index e29cb3875c..8cb0c23ad1 100644
+--- a/codex-rs/core/src/config/mod.rs
++++ b/codex-rs/core/src/config/mod.rs
+@@ -931,6 +931,9 @@ pub struct Config {
+     /// Optional absolute path to patched zsh used by zsh-exec-bridge-backed shell execution.
+     pub zsh_path: Option<PathBuf>,
+ 
++    /// Optional shell executable configured as the default session shell on Windows.
++    pub windows_shell_path: Option<AbsolutePathBuf>,
++
+     /// Value to use for `reasoning.effort` when making a request using the
+     /// Responses API.
+     pub model_reasoning_effort: Option<ReasoningEffort>,
+@@ -3631,6 +3634,26 @@ impl Config {
+         let zsh_path = default_zsh_path
+             .or_else(|| InstallContext::current().bundled_zsh_path())
+             .map(AbsolutePathBuf::into_path_buf);
++        #[cfg(windows)]
++        let windows_shell_path = {
++            cfg.windows
++                .as_ref()
++                .and_then(|windows| windows.shell_path.clone())
++        };
++        #[cfg(not(windows))]
++        let windows_shell_path = None;
++        #[cfg(windows)]
++        if let Some(shell_path) = windows_shell_path.as_ref()
++            && crate::shell::get_shell_by_configured_path(shell_path).is_none()
++        {
++            return Err(std::io::Error::new(
++                std::io::ErrorKind::InvalidInput,
++                format!(
++                    "windows.shell_path `{}` is not usable; set windows.shell_path to a valid shell executable",
++                    shell_path.display()
++                ),
++            ));
++        }
+ 
+         let review_model = override_review_model.or(cfg.review_model);
+ 
+@@ -3721,6 +3744,7 @@ impl Config {
+             &codex_home,
+             zsh_path.as_ref(),
+             main_execve_wrapper_exe.as_ref(),
++            windows_shell_path.as_ref(),
+         );
+         if features.enabled(Feature::MemoryTool) && memories_config.use_memories {
+             helper_readable_roots.push(memories_root);
+@@ -3869,6 +3893,7 @@ impl Config {
+             codex_linux_sandbox_exe,
+             main_execve_wrapper_exe,
+             zsh_path,
++            windows_shell_path,
+ 
+             hide_agent_reasoning: cfg.hide_agent_reasoning.unwrap_or(false),
+             show_raw_agent_reasoning: cfg
+diff --git a/codex-rs/core/src/config/permissions.rs b/codex-rs/core/src/config/permissions.rs
+index 9c6d3ed725..2a0118c00c 100644
+--- a/codex-rs/core/src/config/permissions.rs
++++ b/codex-rs/core/src/config/permissions.rs
+@@ -479,6 +479,7 @@ pub(crate) fn get_readable_roots_required_for_codex_runtime(
+     codex_home: &Path,
+     zsh_path: Option<&PathBuf>,
+     main_execve_wrapper_exe: Option<&PathBuf>,
++    windows_shell_path: Option<&AbsolutePathBuf>,
+ ) -> Vec<AbsolutePathBuf> {
+     let arg0_root = AbsolutePathBuf::from_absolute_path(codex_home.join("tmp").join("arg0")).ok();
+     let zsh_path = zsh_path.and_then(|path| AbsolutePathBuf::from_absolute_path(path).ok());
+@@ -500,6 +501,9 @@ pub(crate) fn get_readable_roots_required_for_codex_runtime(
+     if let Some(execve_wrapper_root) = execve_wrapper_root {
+         readable_roots.push(execve_wrapper_root);
+     }
++    if let Some(windows_shell_path) = windows_shell_path {
++        readable_roots.push(windows_shell_path.clone());
++    }
+     readable_roots
+ }
+ 
+diff --git a/codex-rs/core/src/config/permissions_tests.rs b/codex-rs/core/src/config/permissions_tests.rs
+index 2c1f649042..0ce9ca4f0f 100644
+--- a/codex-rs/core/src/config/permissions_tests.rs
++++ b/codex-rs/core/src/config/permissions_tests.rs
+@@ -12,6 +12,7 @@ use codex_config::permissions_toml::NetworkUnixSocketPermissionsToml;
+ use codex_config::permissions_toml::PermissionProfileToml;
+ use codex_config::permissions_toml::PermissionsToml;
+ use codex_config::permissions_toml::WorkspaceRootsToml;
++use codex_config::types::WindowsToml;
+ use codex_protocol::permissions::FileSystemAccessMode;
+ use codex_protocol::permissions::FileSystemPath;
+ use codex_protocol::permissions::FileSystemSandboxEntry;
+@@ -111,6 +112,60 @@ async fn restricted_read_implicitly_allows_helper_executables() -> std::io::Resu
+     Ok(())
+ }
+ 
++#[tokio::test]
++#[cfg(windows)]
++async fn restricted_read_implicitly_allows_configured_windows_shell() -> std::io::Result<()> {
++    let temp_dir = TempDir::new()?;
++    let cwd = temp_dir.path().join("workspace");
++    let codex_home = temp_dir.path().join(".codex");
++    let shell_path = temp_dir.path().join("runtime").join("bash.exe");
++    std::fs::create_dir_all(&cwd)?;
++    std::fs::create_dir_all(shell_path.parent().expect("shell path should have parent"))?;
++    std::fs::write(&shell_path, "")?;
++
++    let config = Config::load_from_base_config_with_overrides(
++        ConfigToml {
++            default_permissions: Some("workspace".to_string()),
++            permissions: Some(PermissionsToml {
++                entries: BTreeMap::from([(
++                    "workspace".to_string(),
++                    PermissionProfileToml {
++                        description: None,
++                        extends: None,
++                        workspace_roots: None,
++                        filesystem: Some(FilesystemPermissionsToml {
++                            glob_scan_max_depth: None,
++                            entries: BTreeMap::new(),
++                        }),
++                        network: None,
++                    },
++                )]),
++            }),
++            windows: Some(WindowsToml {
++                shell_path: Some(AbsolutePathBuf::try_from(shell_path.clone())?),
++                ..Default::default()
++            }),
++            ..Default::default()
++        },
++        ConfigOverrides {
++            cwd: Some(cwd.clone()),
++            ..Default::default()
++        },
++        AbsolutePathBuf::from_absolute_path(&codex_home)?,
++    )
++    .await?;
++
++    let expected_shell_path = AbsolutePathBuf::try_from(shell_path)?;
++    let policy = config.permissions.file_system_sandbox_policy();
++
++    assert!(
++        policy.can_read_path_with_cwd(expected_shell_path.as_path(), &cwd),
++        "expected configured Windows shell path to be readable, policy: {policy:?}"
++    );
++
++    Ok(())
++}
++
+ #[test]
+ fn network_toml_ignores_legacy_network_list_keys() {
+     let parsed = toml::from_str::<NetworkToml>(
+diff --git a/codex-rs/core/src/session/session.rs b/codex-rs/core/src/session/session.rs
+index 5e7046b148..a8ea31b86e 100644
+--- a/codex-rs/core/src/session/session.rs
++++ b/codex-rs/core/src/session/session.rs
+@@ -414,6 +414,46 @@ impl SessionConfiguration {
+     }
+ }
+ 
++pub(super) fn resolve_default_shell(
++    user_shell_override: Option<shell::Shell>,
++    windows_shell_path: Option<&AbsolutePathBuf>,
++    use_zsh_fork_shell: bool,
++    zsh_path: Option<&PathBuf>,
++) -> anyhow::Result<shell::Shell> {
++    if let Some(user_shell_override) = user_shell_override {
++        return Ok(user_shell_override);
++    }
++
++    #[cfg(windows)]
++    if let Some(windows_shell_path) = windows_shell_path {
++        return shell::get_shell_by_configured_path(windows_shell_path).ok_or_else(|| {
++            anyhow::anyhow!(
++                "configured Windows shell `{}` is not usable",
++                windows_shell_path.display()
++            )
++        });
++    }
++
++    #[cfg(not(windows))]
++    let _ = windows_shell_path;
++
++    if use_zsh_fork_shell {
++        let zsh_path = zsh_path.ok_or_else(|| {
++            anyhow::anyhow!(
++                "zsh fork feature enabled, but no packaged zsh fork is available for this install"
++            )
++        })?;
++        return shell::get_shell(shell::ShellType::Zsh, Some(zsh_path)).ok_or_else(|| {
++            anyhow::anyhow!(
++                "zsh fork feature enabled, but packaged zsh fork `{}` is not usable",
++                zsh_path.display()
++            )
++        });
++    }
++
++    Ok(shell::default_user_shell())
++}
++
+ #[derive(Default, Clone)]
+ pub(crate) struct SessionSettingsUpdate {
+     pub(crate) environments: Option<TurnEnvironmentSelections>,
+@@ -860,26 +900,12 @@ impl Session {
+             );
+ 
+             let use_zsh_fork_shell = config.features.enabled(Feature::ShellZshFork);
+-            let default_shell = if let Some(user_shell_override) =
+-                session_configuration.user_shell_override.clone()
+-            {
+-                user_shell_override
+-            } else if use_zsh_fork_shell {
+-                let zsh_path = config.zsh_path.as_ref().ok_or_else(|| {
+-                    anyhow::anyhow!(
+-                        "zsh fork feature enabled, but no packaged zsh fork is available for this install"
+-                    )
+-                })?;
+-                let zsh_path = zsh_path.to_path_buf();
+-                shell::get_shell(shell::ShellType::Zsh, Some(&zsh_path)).ok_or_else(|| {
+-                    anyhow::anyhow!(
+-                        "zsh fork feature enabled, but packaged zsh fork `{}` is not usable",
+-                        zsh_path.display()
+-                    )
+-                })?
+-            } else {
+-                shell::default_user_shell()
+-            };
++            let default_shell = resolve_default_shell(
++                session_configuration.user_shell_override.clone(),
++                config.windows_shell_path.as_ref(),
++                use_zsh_fork_shell,
++                config.zsh_path.as_ref(),
++            )?;
+             let shell_snapshot = if config.features.enabled(Feature::ShellSnapshot) {
+                 ShellSnapshot::new(
+                     config.codex_home.clone(),
+diff --git a/codex-rs/core/src/session/tests.rs b/codex-rs/core/src/session/tests.rs
+index ece9d446b5..f7f46512aa 100644
+--- a/codex-rs/core/src/session/tests.rs
++++ b/codex-rs/core/src/session/tests.rs
+@@ -5144,6 +5144,31 @@ async fn absolute_cwd_update_with_turn_environment_is_allowed() {
+     assert_eq!(turn_context.environments.turn_environments.len(), 1);
+ }
+ 
++#[test]
++#[cfg(windows)]
++fn default_session_shell_uses_configured_windows_shell_path() {
++    let temp_dir = tempfile::tempdir().expect("create temp dir");
++    let bash_path = temp_dir.path().join("bash.exe");
++    std::fs::write(&bash_path, []).expect("create fake bash executable");
++    let bash_path = bash_path.abs();
++
++    let shell = super::session::resolve_default_shell(
++        /*user_shell_override*/ None,
++        Some(&bash_path),
++        /*use_zsh_fork_shell*/ false,
++        /*zsh_path*/ None,
++    )
++    .expect("configured shell path should resolve");
++
++    assert_eq!(
++        shell,
++        crate::shell::Shell {
++            shell_type: crate::shell::ShellType::Bash,
++            shell_path: bash_path.to_path_buf(),
++        }
++    );
++}
++
+ #[tokio::test]
+ async fn session_new_fails_when_zsh_fork_enabled_without_packaged_zsh() {
+     let codex_home = tempfile::tempdir().expect("create temp dir");
+diff --git a/codex-rs/core/src/shell.rs b/codex-rs/core/src/shell.rs
+index ccd1ea20d2..2188b433ed 100644
+--- a/codex-rs/core/src/shell.rs
++++ b/codex-rs/core/src/shell.rs
+@@ -2,6 +2,7 @@ use codex_exec_server::ShellInfo;
+ use codex_shell_command::shell_detect::DetectedShell;
+ use serde::Deserialize;
+ use serde::Serialize;
++use std::path::Path;
+ use std::path::PathBuf;
+ 
+ pub use codex_shell_command::shell_detect::ShellType;
+@@ -76,7 +77,7 @@ impl Shell {
+     }
+ }
+ 
+-#[cfg(all(test, unix))]
++#[cfg(test)]
+ fn ultimate_fallback_shell() -> Shell {
+     codex_shell_command::shell_detect::ultimate_fallback_shell().into()
+ }
+@@ -85,6 +86,12 @@ pub fn get_shell_by_model_provided_path(shell_path: &PathBuf) -> Shell {
+     codex_shell_command::shell_detect::get_shell_by_model_provided_path(shell_path).into()
+ }
+ 
++#[cfg(windows)]
++pub fn get_shell_by_configured_path(shell_path: &Path) -> Option<Shell> {
++    let shell_type = codex_shell_command::shell_detect::detect_shell_type(shell_path)?;
++    get_shell(shell_type, Some(&shell_path.to_path_buf()))
++}
++
+ pub fn get_shell(shell_type: ShellType, path: Option<&PathBuf>) -> Option<Shell> {
+     codex_shell_command::shell_detect::get_shell(shell_type, path).map(Into::into)
+ }
+@@ -99,6 +106,5 @@ fn default_user_shell_from_path(user_shell_path: Option<PathBuf>) -> Shell {
+ }
+ 
+ #[cfg(test)]
+-#[cfg(unix)]
+ #[path = "shell_tests.rs"]
+ mod tests;
+diff --git a/codex-rs/core/src/shell_tests.rs b/codex-rs/core/src/shell_tests.rs
+index dea4a4f689..3f674319a3 100644
+--- a/codex-rs/core/src/shell_tests.rs
++++ b/codex-rs/core/src/shell_tests.rs
+@@ -23,6 +23,7 @@ fn fish_fallback_to_zsh() {
+ }
+ 
+ #[test]
++#[cfg(unix)]
+ fn detects_bash() {
+     let bash_shell = get_shell(ShellType::Bash, /*path*/ None).unwrap();
+     let shell_path = bash_shell.shell_path;
+@@ -34,6 +35,7 @@ fn detects_bash() {
+ }
+ 
+ #[test]
++#[cfg(unix)]
+ fn detects_sh() {
+     let sh_shell = get_shell(ShellType::Sh, /*path*/ None).unwrap();
+     let shell_path = sh_shell.shell_path;
+@@ -49,7 +51,7 @@ fn can_run_on_shell_test() {
+     if cfg!(windows) {
+         assert!(shell_works(
+             get_shell(ShellType::PowerShell, /*path*/ None),
+-            "Out-String 'Works'",
++            "Write-Output 'Works'",
+             /*required*/ true,
+         ));
+         assert!(shell_works(
+@@ -144,6 +146,7 @@ fn derive_exec_args() {
+ }
+ 
+ #[tokio::test]
++#[cfg(unix)]
+ async fn test_current_shell_detects_zsh() {
+     let shell = Command::new("sh")
+         .arg("-c")
+@@ -164,11 +167,8 @@ async fn test_current_shell_detects_zsh() {
+ }
+ 
+ #[tokio::test]
++#[cfg(windows)]
+ async fn detects_powershell_as_default() {
+-    if !cfg!(windows) {
+-        return;
+-    }
+-
+     let powershell_shell = default_user_shell();
+     let shell_path = powershell_shell.shell_path;
+ 
+@@ -176,13 +176,38 @@ async fn detects_powershell_as_default() {
+ }
+ 
+ #[test]
++#[cfg(windows)]
+ fn finds_powershell() {
+-    if !cfg!(windows) {
+-        return;
+-    }
+-
+     let powershell_shell = get_shell(ShellType::PowerShell, /*path*/ None).unwrap();
+     let shell_path = powershell_shell.shell_path;
+ 
+     assert!(shell_path.ends_with("pwsh.exe") || shell_path.ends_with("powershell.exe"));
+ }
++
++#[test]
++#[cfg(windows)]
++fn configured_windows_shell_path_uses_bash() {
++    let temp_dir = tempfile::tempdir().unwrap();
++    let bash_path = temp_dir.path().join("bash.exe");
++    std::fs::write(&bash_path, []).unwrap();
++
++    let shell = get_shell_by_configured_path(&bash_path).unwrap();
++
++    assert_eq!(
++        shell,
++        Shell {
++            shell_type: ShellType::Bash,
++            shell_path: bash_path,
++        }
++    );
++}
++
++#[test]
++#[cfg(windows)]
++fn invalid_windows_shell_path_is_rejected() {
++    let temp_dir = tempfile::tempdir().unwrap();
++    let unknown_shell_path = temp_dir.path().join("custom-shell.exe");
++    std::fs::write(&unknown_shell_path, []).unwrap();
++
++    assert_eq!(get_shell_by_configured_path(&unknown_shell_path), None);
++}

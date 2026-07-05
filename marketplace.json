@@ -1,0 +1,20 @@
+{
+  "name": "codex-shell-path",
+  "interface": {
+    "displayName": "Codex Shell Path"
+  },
+  "plugins": [
+    {
+      "name": "codex-shell-path-manager",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-shell-path-manager"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

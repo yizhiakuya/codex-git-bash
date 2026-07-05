@@ -1,0 +1,25 @@
+{
+  "name": "codex-shell-path-manager",
+  "version": "0.1.0+codex.20260705184900",
+  "description": "Install, verify, and roll back the local Codex Windows shell_path patch used to run Codex Desktop agents in Git Bash.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Shell Path Manager",
+    "shortDescription": "Repair Codex Desktop Git Bash shell routing",
+    "longDescription": "A local Codex plugin that installs and maintains the patched Codex CLI needed for Windows Desktop agent sessions to honor a configured Git Bash shell_path. It detects Git Bash, can install Git for Windows with winget, configures CODEX_CLI_PATH, verifies the active setup, and rolls back to the official CLI path.",
+    "developerName": "Local developer",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Repair my Codex Git Bash shell setup",
+      "Verify the Codex shell_path patch",
+      "Roll back the patched Codex CLI"
+    ],
+    "brandColor": "#2563EB"
+  }
+}
