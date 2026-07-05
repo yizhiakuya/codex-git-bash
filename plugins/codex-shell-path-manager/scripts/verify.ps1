@@ -41,7 +41,7 @@ try {
     Report-Check -Name 'Git Bash resolves and runs' -Ok $true -Detail $resolvedBash
     Write-Host ''
     Write-Host 'Git Bash probe:'
-    & $resolvedBash -lc 'echo "shell=$SHELL"; command -v rtk || true; rtk --version || true'
+    & $resolvedBash -lc 'echo "shell=$SHELL"; bash --version | head -n 1; command -v git || true'
     if ($LASTEXITCODE -ne 0) {
         Report-Check -Name 'Git Bash probe exit code' -Ok $false -Detail "exit=$LASTEXITCODE"
     }

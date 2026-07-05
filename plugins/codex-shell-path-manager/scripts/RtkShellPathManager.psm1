@@ -5,7 +5,7 @@ function Get-RtkManagerPaths {
     $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $userProfile '.codex' }
     $pluginRoot = Split-Path -Parent $PSScriptRoot
     $stateRoot = Join-Path $codexHome 'codex-shell-path-manager'
-    $binDir = Join-Path $codexHome 'bin\codex-shell-path-rtk'
+    $binDir = Join-Path $codexHome 'bin\codex-shell-path'
 
     [pscustomobject]@{
         UserProfile = $userProfile
@@ -239,8 +239,8 @@ function Test-GitBashPath {
         return $false
     }
     try {
-        $output = & $Path -lc 'printf RTK_GIT_BASH_OK' 2>$null
-        return ($LASTEXITCODE -eq 0 -and (($output -join '') -eq 'RTK_GIT_BASH_OK'))
+        $output = & $Path -lc 'printf CODEX_GIT_BASH_OK' 2>$null
+        return ($LASTEXITCODE -eq 0 -and (($output -join '') -eq 'CODEX_GIT_BASH_OK'))
     } catch {
         return $false
     }
