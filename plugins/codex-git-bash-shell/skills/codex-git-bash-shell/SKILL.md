@@ -5,8 +5,9 @@ description: Install, verify, repair, or roll back the local Codex Desktop Windo
 
 # Codex Git Bash Shell
 
-This is a Codex plugin type: it has `.codex-plugin/plugin.json`, is listed in the personal
-marketplace, and is installed with `codex plugin add codex-git-bash-shell@personal`.
+This is a Codex plugin type: it has `.codex-plugin/plugin.json`, is listed in the
+`codex-git-bash` Git marketplace, and is installed with
+`codex plugin add codex-git-bash-shell@codex-git-bash`.
 
 Use it to maintain the local Windows Codex Desktop setup where:
 

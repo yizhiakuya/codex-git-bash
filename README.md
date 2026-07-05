@@ -90,8 +90,10 @@ The script does not modify the WindowsApps Codex installation.
 
 - Windows Codex Desktop
 - PowerShell
-- Git for Windows, or `winget` so the installer can install it
-- Rust/Cargo toolchain capable of building Codex CLI
+- Git for Windows, or `winget` so the installer can install it. `winget --silent` may still show
+  a Windows prompt or require admin rights depending on the machine policy.
+- Rust/Cargo toolchain capable of building Codex CLI. The installer first tries the pinned
+  `1.95-x86_64-pc-windows-msvc` toolchain and falls back to the default Cargo toolchain.
 - Network access for cloning Codex source unless `-SourceDir` is used
 
 ## Verify

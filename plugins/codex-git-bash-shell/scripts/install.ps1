@@ -51,7 +51,12 @@ $paths = Get-CodexGitBashPaths
 New-DirectoryIfMissing -Path $paths.StateRoot
 New-DirectoryIfMissing -Path $paths.BackupsRoot
 
-$previousEnv = [Environment]::GetEnvironmentVariable('CODEX_CLI_PATH', 'User')
+$existingState = Read-CodexGitBashState -StateFile $paths.StateFile
+$currentUserEnv = [Environment]::GetEnvironmentVariable('CODEX_CLI_PATH', 'User')
+$previousEnv = Resolve-PreviousUserCodexCliPath `
+    -CurrentUserValue $currentUserEnv `
+    -ExistingState $existingState `
+    -PatchedCodexPath $paths.PatchedCodexExe
 $resolvedBash = Resolve-GitBashPath -PreferredPath $BashPath -InstallIfMissing:(!$SkipGitInstall)
 $gitExe = Resolve-GitExePath -BashPath $resolvedBash
 

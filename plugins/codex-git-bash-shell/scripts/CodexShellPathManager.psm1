@@ -233,6 +233,96 @@ function Get-TomlStringKey {
     return $null
 }
 
+function Get-ObjectPropertyValue {
+    param(
+        [AllowNull()]$Object,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return [pscustomobject]@{
+            Exists = $false
+            Value = $null
+        }
+    }
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return [pscustomobject]@{
+            Exists = $false
+            Value = $null
+        }
+    }
+
+    return [pscustomobject]@{
+        Exists = $true
+        Value = $property.Value
+    }
+}
+
+function ConvertTo-ComparablePath {
+    param([AllowNull()][string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    $expanded = [Environment]::ExpandEnvironmentVariables($Path)
+    try {
+        $fullPath = [System.IO.Path]::GetFullPath($expanded)
+    } catch {
+        $fullPath = $expanded
+    }
+
+    return $fullPath.TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    )
+}
+
+function Test-PathValueEqual {
+    param(
+        [AllowNull()][string]$Left,
+        [AllowNull()][string]$Right
+    )
+
+    $normalizedLeft = ConvertTo-ComparablePath -Path $Left
+    $normalizedRight = ConvertTo-ComparablePath -Path $Right
+    if (-not $normalizedLeft -or -not $normalizedRight) {
+        return $false
+    }
+
+    return [string]::Equals($normalizedLeft, $normalizedRight, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Resolve-PreviousUserCodexCliPath {
+    param(
+        [AllowNull()][string]$CurrentUserValue,
+        [AllowNull()]$ExistingState,
+        [Parameter(Mandatory)][string]$PatchedCodexPath
+    )
+
+    $previousInfo = Get-ObjectPropertyValue -Object $ExistingState -Name 'previousUserCODEX_CLI_PATH'
+    $stateCodexInfo = Get-ObjectPropertyValue -Object $ExistingState -Name 'codexCliPath'
+
+    $currentPointsAtPlugin = Test-PathValueEqual -Left $CurrentUserValue -Right $PatchedCodexPath
+    if (-not $currentPointsAtPlugin -and $stateCodexInfo.Exists -and $stateCodexInfo.Value) {
+        $currentPointsAtPlugin = Test-PathValueEqual -Left $CurrentUserValue -Right ([string]$stateCodexInfo.Value)
+    }
+
+    if ($currentPointsAtPlugin) {
+        if ($previousInfo.Exists) {
+            if ($null -eq $previousInfo.Value) {
+                return $null
+            }
+            return [string]$previousInfo.Value
+        }
+        return $null
+    }
+
+    return $CurrentUserValue
+}
+
 function Test-GitBashPath {
     param([Parameter(Mandatory)][string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
@@ -568,4 +658,22 @@ function Read-CodexGitBashState {
     return (Get-Content -LiteralPath $StateFile -Raw | ConvertFrom-Json)
 }
 
-Export-ModuleMember -Function *-*
+Export-ModuleMember -Function @(
+    'Apply-CodexShellPathPatch',
+    'Assert-CodexGitBashWindows',
+    'Backup-FileIfExists',
+    'Build-CodexCli',
+    'Get-CodexGitBashPaths',
+    'Get-ObjectPropertyValue',
+    'Get-TomlStringKey',
+    'Invoke-CodexShellPathTests',
+    'New-CodexSourceClone',
+    'New-DirectoryIfMissing',
+    'Read-CodexGitBashState',
+    'Remove-TomlKey',
+    'Resolve-GitBashPath',
+    'Resolve-GitExePath',
+    'Resolve-PreviousUserCodexCliPath',
+    'Save-CodexGitBashState',
+    'Set-CodexDesktopRouting'
+)

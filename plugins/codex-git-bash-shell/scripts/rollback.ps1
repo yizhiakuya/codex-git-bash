@@ -36,10 +36,11 @@ $state = Read-CodexGitBashState -StateFile $paths.StateFile
 
 Backup-FileIfExists -Path $paths.ConfigPath -BackupRoot $paths.BackupsRoot -Label 'rollback-config' | Out-Null
 
-if ($state -and $state.previousUserCODEX_CLI_PATH) {
-    [Environment]::SetEnvironmentVariable('CODEX_CLI_PATH', [string]$state.previousUserCODEX_CLI_PATH, 'User')
-    $env:CODEX_CLI_PATH = [string]$state.previousUserCODEX_CLI_PATH
-    Write-Host "Restored user CODEX_CLI_PATH to previous value: $($state.previousUserCODEX_CLI_PATH)"
+$previousInfo = Get-ObjectPropertyValue -Object $state -Name 'previousUserCODEX_CLI_PATH'
+if ($previousInfo.Exists -and $previousInfo.Value) {
+    [Environment]::SetEnvironmentVariable('CODEX_CLI_PATH', [string]$previousInfo.Value, 'User')
+    $env:CODEX_CLI_PATH = [string]$previousInfo.Value
+    Write-Host "Restored user CODEX_CLI_PATH to previous value: $($previousInfo.Value)"
 } else {
     [Environment]::SetEnvironmentVariable('CODEX_CLI_PATH', $null, 'User')
     Remove-Item Env:\CODEX_CLI_PATH -ErrorAction SilentlyContinue

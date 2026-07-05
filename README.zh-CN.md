@@ -90,8 +90,10 @@ CODEX_CLI_PATH = "C:\\Users\\you\\.codex\\bin\\codex-git-bash\\codex.exe"
 
 - Windows Codex Desktop
 - PowerShell
-- Git for Windows；如果没有，需要系统可用 `winget` 以便安装器安装
-- 能构建 Codex CLI 的 Rust/Cargo toolchain
+- Git for Windows；如果没有，需要系统可用 `winget` 以便安装器安装。根据机器策略，
+  `winget --silent` 仍可能弹出 Windows 提示或需要管理员权限。
+- 能构建 Codex CLI 的 Rust/Cargo toolchain。安装器会先尝试固定的
+  `1.95-x86_64-pc-windows-msvc` toolchain，失败后回退到默认 Cargo toolchain。
 - 网络访问；如果使用 `-SourceDir` 指向已有源码，则克隆 Codex 源码不需要网络
 
 ## 验证

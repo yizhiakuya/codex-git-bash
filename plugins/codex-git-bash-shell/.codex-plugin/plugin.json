@@ -1,6 +1,6 @@
 {
   "name": "codex-git-bash-shell",
-  "version": "0.1.0+codex.20260705192529",
+  "version": "0.1.0+codex.20260705193638",
   "description": "Install, verify, and roll back the local Codex Windows shell_path patch used to run Codex Desktop agents in Git Bash.",
   "author": {
     "name": "yizhiakuya",
