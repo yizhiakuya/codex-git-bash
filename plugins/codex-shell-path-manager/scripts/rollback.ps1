@@ -2,11 +2,33 @@
 param(
     [switch]$KeepWindowsShellPath,
     [switch]$KeepNodeReplCliPath,
-    [switch]$RemoveBuiltCli
+    [switch]$RemoveBuiltCli,
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $PSScriptRoot 'RtkShellPathManager.psm1') -Force -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -DisableNameChecking
+
+if ($Help) {
+    Write-Host @'
+Codex Shell Path Manager rollback
+
+Restores/removes CODEX_CLI_PATH and removes config.toml keys created by install.
+
+Usage:
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\rollback.ps1 [options]
+
+Options:
+  -KeepWindowsShellPath   Leave [windows].shell_path in ~/.codex/config.toml.
+  -KeepNodeReplCliPath    Leave node_repl CODEX_CLI_PATH in ~/.codex/config.toml.
+  -RemoveBuiltCli         Delete ~/.codex/bin/codex-shell-path/codex.exe.
+  -Help                   Print this help.
+
+Notes:
+  Restart Codex Desktop and open a new thread after rollback.
+'@
+    exit 0
+}
 
 Assert-RtkWindows
 $paths = Get-RtkManagerPaths

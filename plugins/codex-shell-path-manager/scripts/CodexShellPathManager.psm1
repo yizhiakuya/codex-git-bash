@@ -386,13 +386,18 @@ function Test-NativeSuccess {
         [string]$WorkingDirectory
     )
     $previous = Get-Location
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
+        $ErrorActionPreference = 'Continue'
         if ($WorkingDirectory) {
             Set-Location -LiteralPath $WorkingDirectory
         }
         & $FilePath @ArgumentList *> $null
         return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
     } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Set-Location $previous
     }
 }
@@ -464,6 +469,22 @@ function Invoke-CargoWithFallback {
     Invoke-Native -FilePath $cargo.Source -ArgumentList $CargoArgs -WorkingDirectory $SourceDir
 }
 
+function Resolve-CodexCargoDir {
+    param([Parameter(Mandatory)][string]$SourceDir)
+
+    $rootCargoToml = Join-Path $SourceDir 'Cargo.toml'
+    if (Test-Path -LiteralPath $rootCargoToml -PathType Leaf) {
+        return $SourceDir
+    }
+
+    $codexRsCargoToml = Join-Path $SourceDir 'codex-rs\Cargo.toml'
+    if (Test-Path -LiteralPath $codexRsCargoToml -PathType Leaf) {
+        return (Join-Path $SourceDir 'codex-rs')
+    }
+
+    throw "Could not find Cargo.toml in $SourceDir or $SourceDir\codex-rs"
+}
+
 function Build-CodexCli {
     param(
         [Parameter(Mandatory)][string]$SourceDir,
@@ -478,9 +499,10 @@ function Build-CodexCli {
         $targetProfile = 'release'
     }
 
-    Invoke-CargoWithFallback -CargoArgs $cargoArgs -SourceDir $SourceDir -RustToolchain $RustToolchain
+    $cargoDir = Resolve-CodexCargoDir -SourceDir $SourceDir
+    Invoke-CargoWithFallback -CargoArgs $cargoArgs -SourceDir $cargoDir -RustToolchain $RustToolchain
 
-    $builtExe = Join-Path $SourceDir "target\$targetProfile\codex.exe"
+    $builtExe = Join-Path $cargoDir "target\$targetProfile\codex.exe"
     if (-not (Test-Path -LiteralPath $builtExe -PathType Leaf)) {
         throw "Build completed but codex.exe was not found at $builtExe"
     }
@@ -503,7 +525,8 @@ function Invoke-CodexShellPathTests {
         '-E', $filter,
         '--no-fail-fast'
     )
-    Invoke-CargoWithFallback -CargoArgs $args -SourceDir $SourceDir -RustToolchain $RustToolchain
+    $cargoDir = Resolve-CodexCargoDir -SourceDir $SourceDir
+    Invoke-CargoWithFallback -CargoArgs $args -SourceDir $cargoDir -RustToolchain $RustToolchain
 }
 
 function Set-CodexDesktopRouting {

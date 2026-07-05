@@ -9,11 +9,42 @@ param(
     [switch]$Release,
     [switch]$SkipGitInstall,
     [switch]$SkipUserEnvironment,
-    [switch]$SkipConfig
+    [switch]$SkipConfig,
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $PSScriptRoot 'RtkShellPathManager.psm1') -Force -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -DisableNameChecking
+
+if ($Help) {
+    Write-Host @'
+Codex Shell Path Manager installer
+
+Builds a patched Codex CLI, configures Codex Desktop to start that CLI through
+CODEX_CLI_PATH, and sets [windows].shell_path to Git Bash.
+
+Usage:
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 [options]
+
+Options:
+  -SourceDir <path>       Use an existing openai/codex checkout instead of cloning.
+  -RepoUrl <url>          Codex source repo to clone. Default: https://github.com/openai/codex.git
+  -Ref <ref>              Git ref to fetch/checkout before patching.
+  -BashPath <path>        Use a specific Git Bash bash.exe.
+  -RustToolchain <name>   Rust toolchain passed as +toolchain. Default: 1.95-x86_64-pc-windows-msvc
+  -RunTests               Run targeted codex-core tests before installing codex.exe.
+  -Release                Build target\release\codex.exe instead of target\debug\codex.exe.
+  -SkipGitInstall         Do not use winget to install Git for Windows if bash.exe is missing.
+  -SkipUserEnvironment    Do not set the user CODEX_CLI_PATH environment variable.
+  -SkipConfig             Do not edit ~/.codex/config.toml.
+  -Help                   Print this help.
+
+Notes:
+  Restart Codex Desktop and open a new thread after install.
+  This script does not modify the WindowsApps Codex installation.
+'@
+    exit 0
+}
 
 Assert-RtkWindows
 $paths = Get-RtkManagerPaths

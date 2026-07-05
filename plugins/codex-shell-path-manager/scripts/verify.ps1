@@ -1,10 +1,28 @@
 [CmdletBinding()]
 param(
-    [string]$BashPath
+    [string]$BashPath,
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $PSScriptRoot 'RtkShellPathManager.psm1') -Force -DisableNameChecking
+Import-Module (Join-Path $PSScriptRoot 'CodexShellPathManager.psm1') -Force -DisableNameChecking
+
+if ($Help) {
+    Write-Host @'
+Codex Shell Path Manager verifier
+
+Checks whether Codex Desktop is configured to use the patched CLI and a working
+Git Bash shell_path. This script is read-only.
+
+Usage:
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 [options]
+
+Options:
+  -BashPath <path>        Probe a specific Git Bash bash.exe instead of config.toml.
+  -Help                   Print this help.
+'@
+    exit 0
+}
 
 Assert-RtkWindows
 $paths = Get-RtkManagerPaths

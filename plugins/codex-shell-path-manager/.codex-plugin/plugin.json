@@ -1,11 +1,21 @@
 {
   "name": "codex-shell-path-manager",
-  "version": "0.1.0+codex.20260705185952",
+  "version": "0.1.0+codex.20260705191422",
   "description": "Install, verify, and roll back the local Codex Windows shell_path patch used to run Codex Desktop agents in Git Bash.",
   "author": {
     "name": "yizhiakuya",
     "url": "https://github.com/yizhiakuya"
   },
+  "homepage": "https://github.com/yizhiakuya/codex-shell-path-marketplace",
+  "repository": "https://github.com/yizhiakuya/codex-shell-path-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "windows",
+    "git-bash",
+    "shell-path",
+    "desktop"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codex Shell Path Manager",
@@ -21,6 +31,7 @@
       "Verify the Codex shell_path patch",
       "Roll back the patched Codex CLI"
     ],
-    "brandColor": "#2563EB"
+    "brandColor": "#2563EB",
+    "websiteURL": "https://github.com/yizhiakuya/codex-shell-path-marketplace"
   }
 }
