@@ -125,18 +125,21 @@ jobs:
           The zip contains a patched codex.exe plus NOTICE and third-party license files.
           "@
 
-          $existing = gh release view $tag --json tagName 2>$null
+          $repo = "${{ github.repository }}"
+          $existing = gh release view $tag --repo $repo --json tagName 2>$null
           if ($LASTEXITCODE -eq 0 -and $existing) {
             gh release upload $tag `
               (Join-Path $releaseDir "codex-git-bash-windows-x86_64.zip") `
               (Join-Path $releaseDir "SHA256SUMS.txt") `
               (Join-Path $releaseDir "BUILD_INFO.json") `
+              --repo $repo `
               --clobber
           } else {
             $args = @("release", "create", $tag,
               (Join-Path $releaseDir "codex-git-bash-windows-x86_64.zip"),
               (Join-Path $releaseDir "SHA256SUMS.txt"),
               (Join-Path $releaseDir "BUILD_INFO.json"),
+              "--repo", $repo,
               "--title", $tag,
               "--notes", $notes)
             if ("${{ inputs.prerelease }}" -eq "true") {
